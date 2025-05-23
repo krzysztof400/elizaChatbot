@@ -11,4 +11,3 @@ eliza-bot/
 │   └── BotSpec.hs             -- Testy jednostkowe
 ├── README.md
 ├── stack.yaml / cabal.project -- Konfiguracja projektu
-└── LICENSE
