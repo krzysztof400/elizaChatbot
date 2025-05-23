@@ -1,10 +1,8 @@
-module Bot.Memory () where
+module Bot.Memory where
 
 import Data.List (nub)
 import Data.Text as T
 import Bot.Types 
-
-type UserInput = T.Text
 
 -- |do zmiany
 addFact :: UserInput -> BotMemory -> BotMemory
