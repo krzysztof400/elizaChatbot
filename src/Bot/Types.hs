@@ -1,9 +1,10 @@
 module Bot.Types where
 
 import qualified Data.Map as M
+import Data.Text as T
 
 -- | Fact that will be stored by the chatbot.
-type Fact = String
+type Fact = T.Text
 
 -- | Keyword used for pattern matching.
 type Keyword = String
