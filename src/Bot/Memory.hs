@@ -1,4 +1,4 @@
-module Bot.Memory () where
+module Bot.Memory where
 
 import Data.List (nub)
 import Data.Text as T
@@ -8,9 +8,14 @@ import Data.Aeson (encode, decode)
 import qualified Data.ByteString.Lazy as BL
 import System.Directory (doesFileExist)
 
+<<<<<<< HEAD
 type UserInput = T.Text
 
 addFact :: Fact -> BotMemory -> BotMemory
+=======
+-- |do zmiany
+addFact :: UserInput -> BotMemory -> BotMemory
+>>>>>>> c1eb11360ee056cb682ab3ec982d6e984512feae
 addFact f (BotMemory fs) = BotMemory ( nub (f : fs))
 
 listFacts :: BotMemory -> [Fact]
