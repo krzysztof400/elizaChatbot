@@ -2,10 +2,19 @@ module Bot.Types where
 
 import qualified Data.Map as M
 import Data.Text as T
+import Data.Aeson (ToJSON, FromJSON)
 
 -- | Fact that will be stored by the chatbot.
-type Fact = T.Text
+data Fact = Likes T.Text
+           | Dislikes T.Text
+           | Seen T.Text
+           deriving (Show, Eq)
 
+instance ToJSON Fact
+instance FromJSON Fact
+
+
+type UserInput = T.Text
 -- | Keyword used for pattern matching.
 type Keyword = String
 
@@ -19,6 +28,10 @@ type KnowledgeBase = M.Map Keyword [Response]
 newtype BotMemory = BotMemory {
     facts :: [Fact]
 } deriving (Show)
+
+instance ToJSON BotMemory
+instance FromJSON BotMemory
+
 
 -- | Pattern type
 data PatternRule = PatternRule {
