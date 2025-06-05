@@ -4,6 +4,7 @@ import qualified Data.Text as T
 import qualified Data.Map as M
 import Data.Text as T
 import Data.Aeson (ToJSON, FromJSON)
+import Bot.KnowledgeBase
 
 -- | User input
 type UserInput = T.Text
@@ -26,7 +27,7 @@ type Keyword = T.Text
 type Response = T.Text
 
 -- | Responses connected to the keyword
-type KnowledgeBase = M.Map Keyword [Response]
+-- | type KnowledgeBase = M.Map Keyword [Response]
 
 -- | Bot Memory (facts about the user)
 newtype BotMemory = BotMemory {
@@ -46,7 +47,7 @@ data PatternRule = PatternRule {
 -- | Current Bot State
 data BotState = BotState {
     memory :: BotMemory
-    , kb ::KnowledgeBase
+    , knowledgeBase :: [Movie]
 }
 
 
