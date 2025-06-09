@@ -1,17 +1,9 @@
-module KnowledgeBase where
+module Bot.KnowledgeBase where
 
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Data.Aeson (ToJSON, FromJSON)
-
-data Movie = Movie
-  { title :: Text
-  , genres :: [Text]
-  , director :: Text
-  } deriving (Show, Eq, Generic)
-
-instance ToJSON Movie
-instance FromJSON Movie
+import Bot.Types
 
 movies :: [Movie]
 movies =

@@ -1,46 +1,46 @@
 module Bot.Memory () where
 
-import Data.List (nub)
-import Data.Text as T
+import qualified Data.List as L
+import qualified Data.Text as T
 import Bot.Types 
 import Bot.KnowledgeBase
 import Data.Maybe (mapMaybe)
 import Data.Aeson (encode, decode)
 import qualified Data.ByteString.Lazy as BL
 import System.Directory (doesFileExist)
-
-type UserInput = T.Text
+import Text.Regex.TDFA ((=~))
 
 addFact :: Fact -> BotMemory -> BotMemory
-addFact f (BotMemory fs) = BotMemory ( nub (f : fs))
+addFact f (BotMemory fs) = BotMemory ( L.nub (f : fs))
 
 listFacts :: BotMemory -> [Fact]
 listFacts (BotMemory fs) = fs 
 
 matchRegexGroups :: T.Text -> T.Text -> Maybe [T.Text]
-matchRegexGroups input regex = 
-    let (matched, _, _, captures) = input =~ (T.unpack regex) :: (T.Text, T.Text, T.Text, [T.Text])
-    in if T.null matched
+matchRegexGroups input regex =
+    let (matched, _, _, captures) = T.unpack input =~ T.unpack regex :: (String, String, String, [String])
+    in if null matched
         then Nothing
-        else Just (matched : captures)
+        else Just (map T.pack (matched : captures))
+
 
 extractLikes :: UserInput -> [Fact]
 extractLikes input = 
     let lowerInput = T.toLower input
         likePatterns =
-            [ ("I like\\s+(.*?)", Like)
-            , ("I love\\s+(.*?)", Like)
-            , ("I really liked\\s+(.*?)", Like)
-            , ("I enjoyed\\s+(.*?)", Like)    
-            , ("I loved\\s+(.*?)", Like)
-            , ("I liked\\s+(.*?)", Like)
+            [ (T.pack "i like\\s+(.*)", Like)
+            , (T.pack "i love\\s+(.*)", Like)
+            , (T.pack "i really liked(.+)", Like)
+            , (T.pack "i enjoyed\\s+(.*)", Like)    
+            , (T.pack "i loved\\s+(.*)", Like)
+            , (T.pack "i liked\\s+(.*)", Like)
             ]
 
         processLikeRule :: T.Text -> (T.Text, T.Text -> Fact) -> Maybe Fact
         processLikeRule input (pattern, factConstructor) = 
             case matchRegexGroups input pattern of
-                Just (_:capture:_) -> Just $factConstructor capture
-                                _ -> Nothing
+                Just (_:capture:_) -> Just $ factConstructor capture
+                _ -> Nothing
 
         extractedFromPatterns = mapMaybe (processLikeRule lowerInput) likePatterns
     in extractedFromPatterns
@@ -49,44 +49,46 @@ extractDislikes :: UserInput -> [Fact]
 extractDislikes input = 
     let lowerInput = T.toLower input
         dislikePatterns =
-            [ ("I don't like\\s+(.*?)", Dislike)
-            , ("I do not like\\s+(.*?)", Dislike)
-            , ("I dont like\\s+(.*?)", Dislike)
-            , ("I hate\\s+(.*?)", Dislike)
-            , ("I dislike\\s+(.*?)", Dislike)
-            , ("I didnt enjoy\\s+(.*?)", Dislike)    
-            , ("I did not enjoy\\s+(.*?)", Dislike)  
-            , ("I didn't enjoy\\s+(.*?)", Dislike) 
-            , ("I hated\\s+(.*?)", Dislike)
-            , ("I disliked\\s+(.*?)", Dislike)
-            , ("I didn't like\\s+(.*?)", Dislike)
-            , ("I did not like\\s+(.*?)", Dislike)
-            , ("I didnt like\\s+(.*?)", Dislike)
+            [ (T.pack "i don't like\\s+(.*)", Dislike)
+            , (T.pack "i do not like\\s+(.*)", Dislike)
+            , (T.pack "i dont like\\s+(.*)", Dislike)
+            , (T.pack "i hate\\s+(.*)", Dislike)
+            , (T.pack "i dislike\\s+(.*)", Dislike)
+            , (T.pack "i didnt enjoy\\s+(.*)", Dislike)    
+            , (T.pack "i did not enjoy\\s+(.*)", Dislike)  
+            , (T.pack "i didn't enjoy\\s+(.*)", Dislike) 
+            , (T.pack "i hated\\s+(.*)", Dislike)
+            , (T.pack "i disliked\\s+(.*)", Dislike)
+            , (T.pack "i didn't like\\s+(.*)", Dislike)
+            , (T.pack "i did not like\\s+(.*)", Dislike)
+            , (T.pack "i didnt like\\s+(.*)", Dislike)
             ]
 
         processDislikeRule :: T.Text -> (T.Text, T.Text -> Fact) -> Maybe Fact
         processDislikeRule input (pattern, factConstructor) = 
             case matchRegexGroups input pattern of
-                Just (_:capture:_) -> Just $factConstructor capture
-                                _ -> Nothing
+                Just (_:capture:_) -> Just $ factConstructor capture
+                _ -> Nothing
 
-    in extractedFromPatterns = mapMaybe (processDislikeRule lowerInput) dislikePatterns
+        extractedFromPatterns = mapMaybe (processDislikeRule lowerInput) dislikePatterns
+    in extractedFromPatterns
 
 extractSeen :: UserInput -> [Fact]
 extractSeen input = 
     let lowerInput = T.toLower input
         seenPatterns =
-            [ ("I have seen\\s+(.*?)", Seen)
-            , ("I was watching\\s+(.*?)", Seen)
+            [ (T.pack "i have seen\\s+(.*)", Seen)
+            , (T.pack "i was watching\\s+(.*)", Seen)
             ]
 
         processSeenRule :: T.Text -> (T.Text, T.Text -> Fact) -> Maybe Fact
         processSeenRule input (pattern, factConstructor) = 
             case matchRegexGroups input pattern of
-                Just (_:capture:_) -> Just $factConstructor capture
-                                _ -> Nothing
+                Just (_:capture:_) -> Just $ factConstructor capture
+                _ -> Nothing
 
-    in extractedFromPatterns = mapMaybe (processSeenRule lowerInput) seenPatterns
+        extractedFromPatterns = mapMaybe (processSeenRule lowerInput) seenPatterns
+    in extractedFromPatterns
 
 extractFacts :: UserInput -> [Fact]
 extractFacts input = 
@@ -102,7 +104,7 @@ updateFacts botMemory input =
     in updateMemory
 
 hasFact :: BotMemory -> Fact -> Bool
-hasFact (BotMemory fs) f = f 'elem' fs
+hasFact (BotMemory fs) f = f `elem` fs
 
 saveMemory :: FilePath -> BotMemory -> IO ()
 saveMemory path memory = BL.writeFile path (encode memory)
@@ -120,52 +122,49 @@ loadMemory path = do
 
 --- | RECOMMEND MOVIES FUNCTIONS
 
-scoreMatch :: Text -> Text -> Int -> Int
+scoreMatch :: T.Text -> T.Text -> Int -> Int
 scoreMatch keyword fact points =
-    if keyword 'isInfixOf' fact then points else 0
+    if keyword `T.isInfixOf` fact then points else 0
 
-scoreFact :: Movie -> Text -> Int
+scoreFact :: Movie -> T.Text -> Int
 scoreFact movie fact =
-    let factLower = toLower fact
-        titleLower = toLower (title movie)
-        genresLower = map toLower (genre movie)
-        directorLower = toLower (director movie)
+    let factLower = T.toLower fact
+        titleLower = ((T.toLower) . (T.pack)) (title movie)
+        genresLower = map ((T.toLower) . (T.pack)) (genres movie)
+        directorLower = ((T.toLower) . (T.pack)) (director movie)
         titleScore = scoreMatch titleLower fact 1
         genreScore = sum [ scoreMatch gen factLower 2 | gen <- genresLower ]
         directorScore = scoreMatch directorLower fact 5 -- | we prioritize director over title or genre in recommend
     in titleScore + genreScore + directorScore
 
-scoreFacts :: Movie -> [Text] -> Int
+scoreFacts :: Movie -> [T.Text] -> Int
 scoreFacts movie facts = sum $ map (scoreFact movie) facts
 
-isSeen :: Movie -> [Text] -> Bool
+isSeen :: Movie -> [T.Text] -> Bool
 isSeen movie seen =
-        any (\seenFact ->
-         let seenLower = toLower seen
-             titleLower = toLower (title movie)
-         in
-           titleLower `isInfixOf` seenLower
-      ) seenFacts
+    let titleLower = T.toLower (T.pack (title movie))
+    in any (\seenFact -> titleLower `T.isInfixOf` T.toLower seenFact) seen
+    
 
-score :: Movie -> [Text] -> [Text] -> [Text] -> Int
+score :: Movie -> [T.Text] -> [T.Text] -> [T.Text] -> Int
 score movie liked disliked seen =
     if isSeen movie seen 
         then 0
-        else (scoreFact movie liked) - (scoreFacts movie disliked)
+        else (scoreFacts movie liked) - (scoreFacts movie disliked)
 
-recommendedMovies :: Int -> BotState -> [Movie]
-recommendedMovies n (BotState (BotMemory facts) kb) =
+recommendedMovies :: Int -> BotMemory -> [Movie]
+recommendedMovies n (BotMemory fs) =
     let 
-        liked = [toLower t | Like t <- facts]
-        disliked = [toLower t | Dislike t <- facts]
-        seen = [toLower t | Seen t <- facts]
+        liked = [T.toLower t | Like t <- fs]
+        disliked = [T.toLower t | Dislike t <- fs]
+        seen = [T.toLower t | Seen t <- fs]
 
         scored = [ (movie, (score movie liked disliked seen)) | movie <- movies]
-        sorted = take n $ map fst $ reverse $ sortOn snd scored
+        sorted = take n $ map fst $ reverse $ L.sortOn snd scored
     in sorted
 
 
-similiarMovies :: Int -> BotState -> Movie -> [Movie]
+--similiarMovies :: Int -> BotState -> Movie -> [Movie]
 
 
 -- | TODO: implement remove fact, has fact, search facts, update facts

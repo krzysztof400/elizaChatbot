@@ -1,19 +1,21 @@
+{-# LANGUAGE DeriveGeneric #-}
+
 module Bot.Types where
 
 import qualified Data.Text as T
 import qualified Data.Map as M
 import Data.Text as T
 import Data.Aeson (ToJSON, FromJSON)
-import Bot.KnowledgeBase
+import GHC.Generics (Generic)
 
--- | User input
-type UserInput = T.Text
+--import Bot.KnowledgeBase
+
 
 -- | Fact that will be stored by the chatbot.
-data Fact = Likes T.Text
-           | Dislikes T.Text
+data Fact = Like T.Text
+           | Dislike T.Text
            | Seen T.Text
-           deriving (Show, Eq)
+           deriving (Show, Eq, Generic)
 
 instance ToJSON Fact
 instance FromJSON Fact
@@ -32,7 +34,7 @@ type Response = T.Text
 -- | Bot Memory (facts about the user)
 newtype BotMemory = BotMemory {
     facts :: [Fact]
-} deriving (Show)
+} deriving (Show, Generic)
 
 instance ToJSON BotMemory
 instance FromJSON BotMemory
@@ -49,5 +51,14 @@ data BotState = BotState {
     memory :: BotMemory
     , knowledgeBase :: [Movie]
 }
+ 
+data Movie = Movie
+  { title :: String
+  , genres :: [String]
+  , director :: String
+  } deriving (Show, Eq, Generic)
+
+instance ToJSON Movie
+instance FromJSON Movie
 
 
