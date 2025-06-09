@@ -28,10 +28,11 @@ matchPattern input (PatternRule pattern responseTemplate) =
 -- | Substitute captured groups in response template
 substituteGroups :: String -> [String] -> String
 substituteGroups template groups =
-    foldl (\acc (i, group) ->
-        let placeholder = "$" ++ show i
-        in replaceAll placeholder group acc
-    ) template (zip [1..] groups)
+    T.unpack $ foldl (\acc (i, group) ->
+        let placeholder = T.pack $ "$" ++ show i
+            groupText = T.pack group
+        in T.replace placeholder groupText acc
+    ) (T.pack template) (zip [1..] groups)
 
 -- | Replace all occurrences of a substring
 replaceAll :: String -> String -> String -> String
@@ -51,6 +52,7 @@ getMovieDefaultResponse = do
     return $ movieDefaultResponses !! idx
 
 -- | Check if user input contains memory and acknowledge it
+hasMovieMemory :: BotMemory -> UserInput -> Maybe T.Text
 hasMovieMemory (BotMemory facts) input =
     let relevantFacts = filter (isMovieRelatedFact input) facts
     in if null relevantFacts

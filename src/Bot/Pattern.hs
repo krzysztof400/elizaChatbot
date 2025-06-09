@@ -21,7 +21,7 @@ moviePatterns = [
     PatternRule "i hate (.+) movies" "What is it about $1 movies that you dislike?",
     PatternRule "i don't like (.+) movies" "Why don't $1 movies appeal to you?",
     PatternRule "i dislike (.+) films" "What would make a $1 film better for you?",
-    PatternRule "i hate (.+)" "I see. Are there any movies that deal with $1 that you might enjoy?",
+    PatternRule "i hate (.+)" "I see. What would make a $1 better for you?",
 
     -- Specific movies watched
     PatternRule "i watched (.+)" "How was $1? Would you recommend it?",

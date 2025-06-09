@@ -8,7 +8,7 @@ Eliza to prosty chatbot napisany w Haskellu, który prowadzi rozmowę o filmach 
 ```
 eliza-bot/
 ├── src/
-│   ├── Main.hs                 -- Punkt wejścia
+│   ├── Main.hs                -- Punkt wejścia
 │   ├── Bot/Engine.hs          -- Silnik dopasowywania wzorców
 │   ├── Bot/Memory.hs          -- Pamięć rozmowy
 │   ├── Bot/Types.hs           -- Typy danych (np. BotState, UserFact)
