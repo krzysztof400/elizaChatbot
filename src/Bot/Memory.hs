@@ -9,6 +9,7 @@ import Data.Aeson (encode, decode)
 import qualified Data.ByteString.Lazy as BL
 import System.Directory (doesFileExist)
 import Text.Regex.TDFA ((=~))
+import Debug.Trace (trace)
 
 addFact :: Fact -> BotMemory -> BotMemory
 addFact f (BotMemory fs) = BotMemory ( L.nub (f : fs))
@@ -18,7 +19,7 @@ listFacts (BotMemory fs) = fs
 
 matchRegexGroups :: T.Text -> T.Text -> Maybe [T.Text]
 matchRegexGroups input regex =
-    let (matched, _, _, captures) = T.unpack input =~ T.unpack regex :: (String, String, String, [String])
+    let (_, matched, _, captures) = (T.unpack input) =~ (T.unpack regex) :: (String, String, String, [String])
     in if null matched
         then Nothing
         else Just (map T.pack (matched : captures))
@@ -28,57 +29,61 @@ extractLikes :: UserInput -> [Fact]
 extractLikes input = 
     let lowerInput = T.toLower input
         likePatterns =
-            [ (T.pack "i like\\s+(.*)", Like)
-            , (T.pack "i love\\s+(.*)", Like)
+            [ (T.pack "i like(.+)", Like)
+            , (T.pack "i love(.+)", Like)
             , (T.pack "i really liked(.+)", Like)
-            , (T.pack "i enjoyed\\s+(.*)", Like)    
-            , (T.pack "i loved\\s+(.*)", Like)
-            , (T.pack "i liked\\s+(.*)", Like)
+            , (T.pack "i enjoyed(.*)", Like)    
+            , (T.pack "i loved(.+)", Like)
+            , (T.pack "i liked(.+)", Like)
             ]
 
-        processLikeRule :: T.Text -> (T.Text, T.Text -> Fact) -> Maybe Fact
+        processLikeRule :: T.Text -> (T.Text, T.Text -> Fact) -> [Fact]
         processLikeRule input (pattern, factConstructor) = 
             case matchRegexGroups input pattern of
-                Just (_:capture:_) -> Just $ factConstructor capture
-                _ -> Nothing
+                Just (_:capture:_) -> 
+                    let cleaned = T.strip capture
+                    in [factConstructor cleaned, Seen cleaned]
+                _ -> []
 
-        extractedFromPatterns = mapMaybe (processLikeRule lowerInput) likePatterns
+        extractedFromPatterns = concatMap (processLikeRule lowerInput) likePatterns
     in extractedFromPatterns
 
 extractDislikes :: UserInput -> [Fact]
 extractDislikes input = 
     let lowerInput = T.toLower input
         dislikePatterns =
-            [ (T.pack "i don't like\\s+(.*)", Dislike)
-            , (T.pack "i do not like\\s+(.*)", Dislike)
-            , (T.pack "i dont like\\s+(.*)", Dislike)
-            , (T.pack "i hate\\s+(.*)", Dislike)
-            , (T.pack "i dislike\\s+(.*)", Dislike)
-            , (T.pack "i didnt enjoy\\s+(.*)", Dislike)    
-            , (T.pack "i did not enjoy\\s+(.*)", Dislike)  
-            , (T.pack "i didn't enjoy\\s+(.*)", Dislike) 
-            , (T.pack "i hated\\s+(.*)", Dislike)
-            , (T.pack "i disliked\\s+(.*)", Dislike)
-            , (T.pack "i didn't like\\s+(.*)", Dislike)
-            , (T.pack "i did not like\\s+(.*)", Dislike)
-            , (T.pack "i didnt like\\s+(.*)", Dislike)
+            [ (T.pack "i don't like(.*)", Dislike)
+            , (T.pack "i do not like(.*)", Dislike)
+            , (T.pack "i dont like(.*)", Dislike)
+            , (T.pack "i hate(.*)", Dislike)
+            , (T.pack "i dislike(.*)", Dislike)
+            , (T.pack "i didnt enjoy(.*)", Dislike)    
+            , (T.pack "i did not enjoy(.*)", Dislike)  
+            , (T.pack "i didn't enjoy(.*)", Dislike) 
+            , (T.pack "i hated(.*)", Dislike)
+            , (T.pack "i disliked(.*)", Dislike)
+            , (T.pack "i didn't like(.*)", Dislike)
+            , (T.pack "i did not like(.*)", Dislike)
+            , (T.pack "i didnt like(.*)", Dislike)
             ]
 
-        processDislikeRule :: T.Text -> (T.Text, T.Text -> Fact) -> Maybe Fact
+        processDislikeRule :: T.Text -> (T.Text, T.Text -> Fact) -> [Fact]
         processDislikeRule input (pattern, factConstructor) = 
             case matchRegexGroups input pattern of
-                Just (_:capture:_) -> Just $ factConstructor capture
-                _ -> Nothing
+                Just (_:capture:_) -> 
+                    let cleaned = T.strip capture
+                    in [factConstructor cleaned, Seen cleaned]
+                _ -> []
 
-        extractedFromPatterns = mapMaybe (processDislikeRule lowerInput) dislikePatterns
+        extractedFromPatterns = concatMap (processDislikeRule lowerInput) dislikePatterns
     in extractedFromPatterns
 
 extractSeen :: UserInput -> [Fact]
 extractSeen input = 
     let lowerInput = T.toLower input
         seenPatterns =
-            [ (T.pack "i have seen\\s+(.*)", Seen)
-            , (T.pack "i was watching\\s+(.*)", Seen)
+            [ (T.pack "i have seen(.*)", Seen)
+            , (T.pack "i was watching(.*)", Seen)
             ]
 
         processSeenRule :: T.Text -> (T.Text, T.Text -> Fact) -> Maybe Fact
@@ -123,7 +128,7 @@ loadMemory path = do
 --- | RECOMMEND MOVIES FUNCTIONS
 
 scoreMatch :: T.Text -> T.Text -> Int -> Int
-scoreMatch keyword fact points =
+scoreMatch fact keyword points =
     if keyword `T.isInfixOf` fact then points else 0
 
 scoreFact :: Movie -> T.Text -> Int
@@ -132,10 +137,11 @@ scoreFact movie fact =
         titleLower = ((T.toLower) . (T.pack)) (title movie)
         genresLower = map ((T.toLower) . (T.pack)) (genres movie)
         directorLower = ((T.toLower) . (T.pack)) (director movie)
-        titleScore = scoreMatch titleLower fact 1
+        titleScore = scoreMatch titleLower factLower 1
         genreScore = sum [ scoreMatch gen factLower 2 | gen <- genresLower ]
-        directorScore = scoreMatch directorLower fact 5 -- | we prioritize director over title or genre in recommend
+        directorScore = scoreMatch directorLower factLower 5 -- | we prioritize director over title or genre in recommend
     in titleScore + genreScore + directorScore
+
 
 scoreFacts :: Movie -> [T.Text] -> Int
 scoreFacts movie facts = sum $ map (scoreFact movie) facts
@@ -163,9 +169,4 @@ recommendedMovies n (BotMemory fs) =
         sorted = take n $ map fst $ reverse $ L.sortOn snd scored
     in sorted
 
-
---similiarMovies :: Int -> BotState -> Movie -> [Movie]
-
-
--- | TODO: implement remove fact, has fact, search facts, update facts
 -- | TODO: data serialization to Name.file (facts about current user)
