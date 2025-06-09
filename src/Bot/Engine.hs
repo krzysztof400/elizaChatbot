@@ -116,8 +116,8 @@ generateRecommendations memory =
             ". Would you like to know more about any of these?"
 
 -- | Main respond function - movie-focused version
-respond :: BotState -> UserInput -> IO T.Text
-respond (BotState memory _) input
+respond :: BotMemory -> UserInput -> IO T.Text
+respond memory input
     | T.null (T.strip input) = return "What movie would you like to talk about?"
     | isRecommendationRequest input = return $ generateRecommendations memory
     | otherwise = do
