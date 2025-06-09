@@ -1,90 +1,128 @@
-module Engine where
+{-# LANGUAGE OverloadedStrings #-}
+
+module Bot.Engine where
 
 import Bot.Types
+import Bot.KnowledgeBase
+import Bot.Memory
 import qualified Data.Text as T
 import qualified Data.List as L
-import Data.Char (toLower)
 import Text.Regex.TDFA
-import System.Random
+import System.Random (randomRIO)
+import Bot.Pattern
 
--- Match input against a single pattern rule
+-- | Match input against a single pattern rule
 matchPattern :: UserInput -> PatternRule -> Maybe Response
 matchPattern input (PatternRule pattern responseTemplate) =
     let inputStr = T.unpack $ T.toLower input
-        regex = makeRegexOpts defaultCompOpt defaultExecOpt pattern
+        regex = makeRegexOpts defaultCompOpt defaultExecOpt pattern :: Regex
     in case matchM regex inputStr of
-        Just match -> 
+        Just match ->
             let groups = mrSubList match
-                response = if length groups > 1 
+                response = if length groups > 1
                           then substituteGroups responseTemplate (tail groups)
                           else responseTemplate
             in Just (T.pack response)
         Nothing -> Nothing
 
--- Substitute captured groups in response template
+-- | Substitute captured groups in response template
 substituteGroups :: String -> [String] -> String
-substituteGroups template groups = 
-    foldl (\acc (i, group) -> 
+substituteGroups template groups =
+    foldl (\acc (i, group) ->
         let placeholder = "$" ++ show i
         in replaceAll placeholder group acc
     ) template (zip [1..] groups)
 
--- Replace all occurrences of a substring
+-- | Replace all occurrences of a substring
 replaceAll :: String -> String -> String -> String
 replaceAll old new = T.unpack . T.replace (T.pack old) (T.pack new) . T.pack
 
--- Find first matching pattern and generate response
+-- | Find first matching pattern and generate response
 findMatchingResponse :: UserInput -> [PatternRule] -> Maybe Response
-findMatchingResponse input patterns = 
+findMatchingResponse input patterns =
     case [resp | pattern <- patterns, Just resp <- [matchPattern input pattern]] of
         (response:_) -> Just response
         [] -> Nothing
 
--- Get a movie-focused default response
-getMovieDefaultResponse :: T.Text
-getMovieDefaultResponse = head movieDefaultResponses
+-- | Get a random movie-focused default response
+getMovieDefaultResponse :: IO T.Text
+getMovieDefaultResponse = do
+    idx <- randomRIO (0, length movieDefaultResponses - 1)
+    return $ movieDefaultResponses !! idx
 
--- Check if user input contains memory and acknowledge it
-hasMovieMemory :: BotMemory -> UserInput -> Maybe T.Text
-hasMovieMemory (BotMemory facts) _ =
-    if null facts
-    then Nothing
-    else Just $ "I remember you mentioned " <> formatMovieFacts facts
+-- | Check if user input contains memory and acknowledge it
+hasMovieMemory (BotMemory facts) input =
+    let relevantFacts = filter (isMovieRelatedFact input) facts
+    in if null relevantFacts
+       then Nothing
+       else Just $ "I remember you mentioned " <> formatMovieFacts relevantFacts
 
--- Check if a fact relates to movies or entertainment
--- isMovieRelatedFact :: T.Text -> Fact -> Bool
--- isMovieRelatedFact input fact = 
---     let factText = getFactText fact
---         movieKeywords = ["movie", "film", "cinema", "theater", "watch", "netflix", "streaming"]
---         hasMovieKeyword = any (`T.isInfixOf` factText) movieKeywords
---         isInInput = factText `T.isInfixOf` input
---     in hasMovieKeyword || isInInput
+-- | Check if a fact relates to movies or entertainment
+isMovieRelatedFact :: T.Text -> Fact -> Bool
+isMovieRelatedFact input fact =
+    let factText = getFactText fact
+        -- Expanded keywords for better detection
+        movieKeywords = ["movie", "film", "cinema", "theater", "theatre", "watch", "netflix", "streaming", "director", "actor", "actress", "genre", "plot", "scene", "character", "series", "sequel", "soundtrack", "review"]
+        inputLower = T.toLower input
+        factLower = T.toLower factText
 
--- Extract text from fact
+        -- True if the fact's content itself is about movies
+        factItselfIsMovieRelated = any (`T.isInfixOf` factLower) movieKeywords
+        
+        -- True if the current user input is about movies
+        inputIsMovieRelated = any (`T.isInfixOf` inputLower) movieKeywords
+        
+        -- True if the fact's subject (e.g., a movie title) is mentioned in the current input
+        factSubjectMentionedInInput = not (T.null factLower) && factLower `T.isInfixOf` inputLower
+
+    in factItselfIsMovieRelated || (inputIsMovieRelated && factSubjectMentionedInInput)
+
+-- | Extract text from fact
 getFactText :: Fact -> T.Text
-getFactText (Likes thing) = thing
-getFactText (Dislikes thing) = thing
+getFactText (Like thing) = thing
+getFactText (Dislike thing) = thing
 getFactText (Seen thing) = thing
 
--- Format movie-related facts for display
+-- | Format movie-related facts for display
 formatMovieFacts :: [Fact] -> T.Text
 formatMovieFacts facts = T.intercalate ", " (map formatMovieFact facts)
 
--- Format a single movie-related fact
+-- | Format a single movie-related fact
 formatMovieFact :: Fact -> T.Text
-formatMovieFact (Likes thing) = "enjoying " <> thing
-formatMovieFact (Dislikes thing) = "not liking " <> thing
+formatMovieFact (Like thing) = "enjoying " <> thing
+formatMovieFact (Dislike thing) = "not liking " <> thing
 formatMovieFact (Seen thing) = "watching " <> thing
 
--- Main respond function - movie-focused version
-respond :: BotState -> UserInput -> T.Text
-respond (BotState memory _) input 
-    | T.null (T.strip input) = "What movie would you like to talk about?"
-    | otherwise = 
-        let baseResponse = case findMatchingResponse input moviePatterns of
-                Just resp -> resp
-                Nothing -> getMovieDefaultResponse
-        --     memoryResponse = hasMovieMemory memory input
-        -- in case memoryResponse of
-        --     Just memResp -> memResp <> ". " <> baseResponse
-        --     Nothing -> baseResponse
+-- | Check if input is asking for recommendations
+isRecommendationRequest :: UserInput -> Bool
+isRecommendationRequest input =
+    let lowerInput = T.toLower input
+        recommendKeywords = ["recommend", "suggest", "what should i watch", "movie suggestion", "good movie"]
+    in any (`T.isInfixOf` lowerInput) recommendKeywords
+
+-- | Generate movie recommendations response
+generateRecommendations :: BotMemory -> T.Text
+generateRecommendations memory =
+    let recommendations = recommendedMovies 3 memory
+    in if null recommendations
+       then "I'd love to recommend movies, but I need to know more about your preferences! Tell me about movies you like or dislike."
+       else "Based on your preferences, I recommend: " <> 
+            T.intercalate ", " (map (T.pack . title) recommendations) <> 
+            ". Would you like to know more about any of these?"
+
+-- | Main respond function - movie-focused version
+respond :: BotState -> UserInput -> IO T.Text
+respond (BotState memory _) input
+    | T.null (T.strip input) = return "What movie would you like to talk about?"
+    | isRecommendationRequest input = return $ generateRecommendations memory
+    | otherwise = do
+        let baseResponse = findMatchingResponse input moviePatterns
+            memoryResponse = hasMovieMemory memory input
+        
+        finalBaseResponse <- case baseResponse of
+            Just resp -> return resp
+            Nothing -> getMovieDefaultResponse
+        
+        return $ case memoryResponse of
+            Just memResp -> memResp <> T.pack ". " <> finalBaseResponse
+            Nothing -> finalBaseResponse
