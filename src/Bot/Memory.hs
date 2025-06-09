@@ -1,4 +1,4 @@
-module Bot.Memory () where
+module Bot.Memory where
 
 import qualified Data.List as L
 import qualified Data.Text as T
@@ -166,7 +166,8 @@ recommendedMovies n (BotMemory fs) =
         seen = [T.toLower t | Seen t <- fs]
 
         scored = [ (movie, (score movie liked disliked seen)) | movie <- movies]
-        sorted = take n $ map fst $ reverse $ L.sortOn snd scored
+        filtered = filter (\(_, sc) -> sc > 0) scored
+        sorted = take n $ map fst $ reverse $ L.sortOn snd filtered
     in sorted
 
 -- | TODO: data serialization to Name.file (facts about current user)
