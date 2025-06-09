@@ -1,5 +1,4 @@
 module Bot.Memory where
-module Bot.Memory where
 
 import qualified Data.List as L
 import qualified Data.Text as T
