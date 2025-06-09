@@ -1,0 +1,36 @@
+name: eliza-bot
+version: 0.1.0.0
+github: "your/repo"
+license: BSD3
+author: "Your Name"
+maintainer: "your@email.com"
+extra-source-files:
+  - README.md
+
+dependencies:
+  - base >= 4.7 && < 5
+  - text
+  - regex-tdfa
+  - aeson
+  - bytestring
+  - directory
+  - containers
+  - random
+  - array
+
+library:
+  source-dirs: src
+  exposed-modules:
+    - Bot.Memory
+    - Bot.Types
+    - Bot.KnowledgeBase
+    - Bot.Engine
+    - Bot.Pattern
+
+executables:
+  eliza:
+    main: Main.hs
+    source-dirs: src
+    ghc-options: -Wall
+    dependencies:
+      - eliza-bot
