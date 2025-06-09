@@ -44,23 +44,21 @@ findMatchingResponse input patterns =
 getMovieDefaultResponse :: T.Text
 getMovieDefaultResponse = head movieDefaultResponses
 
--- Check if user input contains movie-related memory and acknowledge it
+-- Check if user input contains memory and acknowledge it
 hasMovieMemory :: BotMemory -> UserInput -> Maybe T.Text
-hasMovieMemory (BotMemory facts) input =
-    let lowerInput = T.toLower input
-        movieFacts = filter (isMovieRelatedFact lowerInput) facts
-    in if null movieFacts 
-       then Nothing
-       else Just $ "I remember you mentioned " <> formatMovieFacts movieFacts
+hasMovieMemory (BotMemory facts) _ =
+    if null facts
+    then Nothing
+    else Just $ "I remember you mentioned " <> formatMovieFacts facts
 
 -- Check if a fact relates to movies or entertainment
-isMovieRelatedFact :: T.Text -> Fact -> Bool
-isMovieRelatedFact input fact = 
-    let factText = getFactText fact
-        movieKeywords = ["movie", "film", "cinema", "theater", "watch", "netflix", "streaming"]
-        hasMovieKeyword = any (`T.isInfixOf` factText) movieKeywords
-        isInInput = factText `T.isInfixOf` input
-    in hasMovieKeyword || isInInput
+-- isMovieRelatedFact :: T.Text -> Fact -> Bool
+-- isMovieRelatedFact input fact = 
+--     let factText = getFactText fact
+--         movieKeywords = ["movie", "film", "cinema", "theater", "watch", "netflix", "streaming"]
+--         hasMovieKeyword = any (`T.isInfixOf` factText) movieKeywords
+--         isInInput = factText `T.isInfixOf` input
+--     in hasMovieKeyword || isInInput
 
 -- Extract text from fact
 getFactText :: Fact -> T.Text
