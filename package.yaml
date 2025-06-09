@@ -16,6 +16,7 @@ dependencies:
   - directory
   - containers
   - random
+  - array
 
 library:
   source-dirs: src
