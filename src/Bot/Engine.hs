@@ -52,12 +52,15 @@ getMovieDefaultResponse = do
     return $ movieDefaultResponses !! idx
 
 -- | Check if user input contains memory and acknowledge it
-hasMovieMemory :: BotMemory -> UserInput -> Maybe T.Text
-hasMovieMemory (BotMemory facts) input =
+hasMovieMemory :: BotMemory -> UserInput -> IO (Maybe T.Text)
+hasMovieMemory (BotMemory facts) input = do
     let relevantFacts = filter (isMovieRelatedFact input) facts
-    in if null relevantFacts
-       then Nothing
-       else Just $ "I remember you mentioned " <> formatMovieFacts relevantFacts
+    if null relevantFacts
+        then return Nothing
+        else do
+            idx <- randomRIO (0, length relevantFacts - 1)
+            let randomFact = relevantFacts !! idx
+            return $ Just $ "I remember you mentioned " <> formatMovieFact randomFact
 
 -- | Check if a fact relates to movies or entertainment
 isMovieRelatedFact :: T.Text -> Fact -> Bool
@@ -119,12 +122,12 @@ respond (BotState memory _) input
     | isRecommendationRequest input = return $ generateRecommendations memory
     | otherwise = do
         let baseResponse = findMatchingResponse input moviePatterns
-            memoryResponse = hasMovieMemory memory input
+        memoryResponse <- hasMovieMemory memory input
         
         finalBaseResponse <- case baseResponse of
             Just resp -> return resp
             Nothing -> getMovieDefaultResponse
         
-        return $ case memoryResponse of
-            Just memResp -> memResp <> T.pack ". " <> finalBaseResponse
-            Nothing -> finalBaseResponse
+        case memoryResponse of
+            Just memResp -> return $ memResp <> T.pack ". " <> finalBaseResponse
+            Nothing -> return finalBaseResponse
