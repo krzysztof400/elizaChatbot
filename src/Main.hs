@@ -6,14 +6,10 @@ import System.IO (hFlush, stdout)
 import Control.Monad (void)
 import Bot.Types
 import Bot.Memory
+import Engine
 
 updateInfo :: BotState -> UserInput -> BotState
 updateInfo (BotState memory kb) input = BotState (addFact input memory) kb
-
-respond :: BotState -> UserInput -> T.Text
-respond _ input
-  | "movie" `T.isInfixOf` T.toLower input = "Tell me more about the movies you like!"
-  | otherwise = "I'm here to listen. Please continue."
 
 conversation :: BotState -> IO BotState
 conversation state = do
