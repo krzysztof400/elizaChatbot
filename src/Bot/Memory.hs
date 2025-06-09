@@ -128,7 +128,7 @@ loadMemory path = do
 --- | RECOMMEND MOVIES FUNCTIONS
 
 scoreMatch :: T.Text -> T.Text -> Int -> Int
-scoreMatch fact keyword points =
+scoreMatch keyword fact points =
     if keyword `T.isInfixOf` fact then points else 0
 
 scoreFact :: Movie -> T.Text -> Int
