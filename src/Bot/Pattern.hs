@@ -53,6 +53,8 @@ moviePatterns = [
     PatternRule "\\b(director|directed by)\\b (.+)" "What do you think of $2's directing style? Have you seen their other films?",
     PatternRule "\\b(actor|actress)\\b (.+)" "What's your favorite movie with $2? Do you follow their career?",
     PatternRule "\\bstarring\\b (.+)" "How was $1's performance? Do you enjoy their other movies?",
+    PatternRule "\\b(lead|main) actor\\b (.+)" "What do you think of $2 as a lead actor? Have they been in any memorable roles?",
+    PatternRule "\\b(lead|main) actress\\b (.+)" "What do you think of $2 as a lead actress? Have they been in any memorable roles?",
 
     -- Movie theaters and watching experience
     PatternRule "\\b(theater|theatre|cinema)\\b" "Do you prefer watching movies in theaters or at home? What's the last movie you saw in theaters?",
