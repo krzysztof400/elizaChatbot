@@ -45,12 +45,6 @@ data PatternRule = PatternRule {
     patternRegex :: String
     , response :: String
 }
-
--- | Current Bot State
-data BotState = BotState {
-    memory :: BotMemory
-    , knowledgeBase :: [Movie]
-}
  
 data Movie = Movie
   { title :: String
