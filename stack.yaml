@@ -1,1 +1,17 @@
-stack add aeson
+resolver: lts-21.25
+
+packages:
+  - .
+
+extra-deps: []
+
+# Jeśli chcesz używać konkretnej wersji GHC:
+# compiler: ghc-9.4.8
+
+# Ustawienia builda
+build:
+  library-profiling: true
+
+# Ustawienia ghc-options (opcjonalnie)
+ghc-options:
+  "$everything": -Wall
